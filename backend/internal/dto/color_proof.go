@@ -33,3 +33,22 @@ type UpdateColorProof struct {
 	Evidence        string    `json:"evidence" binding:"max=2000"`
 	RelatedCode     string    `json:"relatedCode" binding:"max=64"`
 }
+
+// CalibrationGroupSummary 是某个「关联编码 + 类别」基准组的校准摘要。
+type CalibrationGroupSummary struct {
+	RelatedCode string  `json:"relatedCode"`
+	Category    string  `json:"category"`
+	Tolerance   float64 `json:"tolerance"`
+	Baseline    float64 `json:"baseline"`
+	SampleSize  int     `json:"sampleSize"`
+	Accepted    int     `json:"accepted"`
+	OpenBlocked int     `json:"openBlocked"`
+}
+
+// CalibrationSummary 是漂移门禁的只读汇总，刷新工作台后可直接读取。
+type CalibrationSummary struct {
+	TotalProofs    int64                     `json:"totalProofs"`
+	AcceptedProofs int64                     `json:"acceptedProofs"`
+	OpenBlocked    int64                     `json:"openBlocked"`
+	Groups         []CalibrationGroupSummary `json:"groups"`
+}

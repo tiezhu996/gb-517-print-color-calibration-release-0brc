@@ -12,7 +12,10 @@ import (
 )
 
 func handleError(c *gin.Context, err error) {
+	var driftBlocked *service.ErrDriftBlocked
 	switch {
+	case errors.As(err, &driftBlocked):
+		util.Fail(c, http.StatusUnprocessableEntity, "drift_gate_blocked", err.Error())
 	case errors.Is(err, gorm.ErrRecordNotFound):
 		util.Fail(c, http.StatusNotFound, "not_found", "record was not found")
 	case errors.Is(err, repository.ErrVersionConflict):

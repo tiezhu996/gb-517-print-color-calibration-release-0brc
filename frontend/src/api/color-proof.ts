@@ -1,6 +1,6 @@
 
 import { request } from './client';
-import type { DomainRecord } from '../types/domain';
+import type { CalibrationSummary, DomainRecord } from '../types/domain';
 
 export async function listColorProof(page = 1, pageSize = 20, search = '') {
   return request<DomainRecord[]>(`/proofs?page=${page}&pageSize=${pageSize}&search=${encodeURIComponent(search)}`);
@@ -12,4 +12,7 @@ export async function transitionColorProof(id: number, status: string, expectedV
   return request<DomainRecord>(`/proofs/${id}/transition`, {
     method: 'POST', body: JSON.stringify({ status, expectedVersion, reason }),
   });
+}
+export async function getCalibrationSummary() {
+  return request<CalibrationSummary>('/proofs/calibration-summary');
 }

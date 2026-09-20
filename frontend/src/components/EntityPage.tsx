@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { request } from '../api/client';
 import { roleAtLeast, useAuth } from '../hooks/useAuth';
 import { usePagination } from '../hooks/usePagination';
@@ -30,7 +30,26 @@ function nextPermittedStatus(config: EntityConfig, current: string, reviewer: bo
   return transitions[config.key]?.[current] ?? null;
 }
 
-export function EntityPage({ config, useStore }: { config: EntityConfig; useStore: EntityStore }) {
+function formatGateNumber(value: number | null | undefined): string {
+  return value === null || value === undefined ? '—' : value.toFixed(2);
+}
+
+// GateBadge 展示色彩校样的漂移门禁结论；阻断时同时给出基准、偏差与阻断原因。
+function GateBadge({ item, detail = false }: { item: DomainRecord; detail?: boolean }) {
+  if (!item.gateStatus || item.gateStatus === 'pending') {
+    return <span className="status status--neutral gate-badge">门禁：待基准</span>;
+  }
+  if (item.gateStatus === 'blocked') {
+    return <div className="gate-blocked">
+      <span className="status status--danger gate-badge">门禁：阻断{item.superseded ? '·已取代' : ''}</span>
+      <small className="gate-reason">{item.gateBlockReason || '读数漂移超过类别容差'}</small>
+      {detail && <small className="gate-metric">基准 {formatGateNumber(item.gateBaseline)} · 偏差 {formatGateNumber(item.gateDeviation)} · 容差 ±{formatGateNumber(item.gateTolerance)}（{item.gateSampleSize ?? 0} 份样本）</small>}
+    </div>;
+  }
+  return <span className="status status--success gate-badge">门禁：通过{detail ? `（基准 ${formatGateNumber(item.gateBaseline)} · 偏差 ${formatGateNumber(item.gateDeviation)} · ±${formatGateNumber(item.gateTolerance)}）` : ''}</span>;
+}
+
+export function EntityPage({ config, useStore, headerPanel }: { config: EntityConfig; useStore: EntityStore; headerPanel?: ReactNode }) {
   const { session } = useAuth();
   const { items, meta, loading, error, load, createRecord, transition } = useStore();
   const [search, setSearch] = useState('');
@@ -58,17 +77,18 @@ export function EntityPage({ config, useStore }: { config: EntityConfig; useStor
 
   return <main className="workspace">
     <header className="page-header"><div><p className="eyebrow">业务工作台</p><h1>{config.label}</h1><p>统一管理{config.label}的状态、风险、证据与责任人。</p></div>{canWrite && <UiButton onClick={() => setShowCreate(true)}>新增{config.label}</UiButton>}</header>
+    {headerPanel}
     <section className="metrics"><MetricCard label="记录总数" value={meta.total} detail="当前筛选范围"/><MetricCard label="高风险" value={highRisk} detail="需要优先复核"/><MetricCard label="状态种类" value={new Set(items.map((item) => item.status)).size} detail="状态机覆盖"/></section>
     {(config.key === 'colorProof' || config.key === 'releaseDecision') && <ColorTable records={items} title={config.key === 'colorProof' ? '当前校样读数' : '放行依据读数'} />}
     <section className="toolbar"><input aria-label="搜索" placeholder={`搜索${config.label}编码或名称`} value={search} onChange={(event) => setSearch(event.target.value)} /><UiButton onClick={() => { setPage(1); setSubmittedSearch(search); }}>查询</UiButton><button className="link-button" onClick={() => { setSearch(''); setSubmittedSearch(''); setPage(1); }}>重置</button></section>
     {error && <div className="alert" role="alert">{error}</div>}
     <section className="table-shell" aria-busy={loading}><table><thead><tr><th>编码</th><th>名称</th><th>状态</th><th>风险</th><th>责任人</th><th>指标</th><th>更新时间</th><th>操作</th></tr></thead><tbody>
-      {items.map((item) => { const target = nextPermittedStatus(config, item.status, canReview); return <tr key={item.id}><td><strong>{item.code}</strong></td><td><button className="record-link" onClick={() => void openDetail(item)}>{item.name}</button><small>{item.facility}</small></td><td>{config.key === 'printRun' ? <RunStateBadge state={item.status as RunState}/> : <StatusBadge status={item.status}/>} {config.key === 'releaseDecision' && <RunStateBadge state={decisionRunState(item.status)}/>}</td><td>{item.riskLevel}</td><td>{item.owner}</td><td>{item.metricValue} {item.metricUnit}</td><td>{formatDate(item.updatedAt)}</td><td>{canWrite && target ? <button className="table-action" onClick={() => setPending({ item, status: target })}>推进至 {target}</button> : <button className="table-action" onClick={() => void openDetail(item)}>查看详情</button>}</td></tr>; })}
+      {items.map((item) => { const target = nextPermittedStatus(config, item.status, canReview); return <tr key={item.id}><td><strong>{item.code}</strong></td><td><button className="record-link" onClick={() => void openDetail(item)}>{item.name}</button><small>{item.facility}</small></td><td>{config.key === 'printRun' ? <RunStateBadge state={item.status as RunState}/> : <StatusBadge status={item.status}/>} {config.key === 'releaseDecision' && <RunStateBadge state={decisionRunState(item.status)}/>}{config.key === 'colorProof' && <GateBadge item={item} />}</td><td>{item.riskLevel}</td><td>{item.owner}</td><td>{item.metricValue} {item.metricUnit}</td><td>{formatDate(item.updatedAt)}</td><td>{canWrite && target ? <button className="table-action" onClick={() => setPending({ item, status: target })}>推进至 {target}</button> : <button className="table-action" onClick={() => void openDetail(item)}>查看详情</button>}</td></tr>; })}
       {!items.length && !loading && <tr><td colSpan={8}><EmptyState title="没有匹配记录" detail="可清空搜索条件后重新查询" /></td></tr>}
     </tbody></table>{loading && <div className="loading">正在同步业务数据…</div>}</section>
     <footer className="pagination"><button onClick={previous} disabled={page <= 1}>上一页</button><span>第 {page} / {pages} 页</span><button onClick={next} disabled={page >= pages}>下一页</button></footer>
     <ConfirmDialog open={showCreate} title={`新增${config.label}`} onCancel={() => setShowCreate(false)} onConfirm={() => void createDemo()}><p>将创建一条包含完整责任人、风险和证据信息的演示记录。</p></ConfirmDialog>
     <ConfirmDialog open={Boolean(pending)} title="确认状态迁移" onCancel={() => setPending(null)} onConfirm={() => { if (pending) void transition(config.path, pending.item, pending.status).then(() => setPending(null)); }}><p>状态迁移会写入审计日志；色彩配置和放行决定同时生成不可变版本。</p><strong>{pending?.item.status} → {pending?.status}</strong></ConfirmDialog>
-    <ConfirmDialog open={Boolean(detail)} title={`${detail?.code || ''} 记录详情`} onCancel={() => setDetail(null)} onConfirm={() => setDetail(null)}>{detail && <div className="detail-content"><p>{detail.description}</p><dl><div><dt>证据</dt><dd>{detail.evidence || '-'}</dd></div><div><dt>当前版本</dt><dd>v{detail.version}</dd></div></dl><ColorTable records={[detail]} title="记录色彩读数" />{detail.revisions?.length ? <div className="revision-list"><h3>版本链</h3>{detail.revisions.map((revision) => <article key={revision.id}><strong>v{revision.version} · {revision.status}</strong><span>{revision.actor} · {revision.reason}</span><code>{revision.requestId}</code></article>)}</div> : null}</div>}</ConfirmDialog>
+    <ConfirmDialog open={Boolean(detail)} title={`${detail?.code || ''} 记录详情`} onCancel={() => setDetail(null)} onConfirm={() => setDetail(null)}>{detail && <div className="detail-content"><p>{detail.description}</p><dl><div><dt>证据</dt><dd>{detail.evidence || '-'}</dd></div><div><dt>当前版本</dt><dd>v{detail.version}</dd></div></dl>{config.key === 'colorProof' && <div className="gate-detail"><h3>漂移门禁</h3><GateBadge item={detail} detail /></div>}<ColorTable records={[detail]} title="记录色彩读数" />{detail.revisions?.length ? <div className="revision-list"><h3>版本链</h3>{detail.revisions.map((revision) => <article key={revision.id}><strong>v{revision.version} · {revision.status}</strong><span>{revision.actor} · {revision.reason}</span><code>{revision.requestId}</code></article>)}</div> : null}</div>}</ConfirmDialog>
   </main>;
 }

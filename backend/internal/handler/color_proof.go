@@ -19,6 +19,7 @@ func NewColorProofHandler(s service.ColorProofService) *ColorProofHandler {
 func (h *ColorProofHandler) Register(group *gin.RouterGroup) {
 	resource := group.Group("/proofs")
 	resource.GET("", h.list)
+	resource.GET("/calibration-summary", h.calibrationSummary)
 	resource.GET("/:id", h.get)
 	resource.POST("", middleware.RequireMinimumRole("operator"), h.create)
 	resource.PUT("/:id", middleware.RequireMinimumRole("operator"), h.update)
@@ -34,6 +35,15 @@ func (h *ColorProofHandler) list(c *gin.Context) {
 		return
 	}
 	util.Page(c, result.Items, result.Page, result.PageSize, result.Total)
+}
+
+func (h *ColorProofHandler) calibrationSummary(c *gin.Context) {
+	summary, err := h.service.CalibrationSummary(c.Request.Context())
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+	util.OK(c, summary)
 }
 
 func (h *ColorProofHandler) get(c *gin.Context) {

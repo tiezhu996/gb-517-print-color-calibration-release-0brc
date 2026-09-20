@@ -18,6 +18,32 @@ export interface DomainRecord {
   createdAt: string;
   updatedAt: string;
   revisions?: RevisionRecord[];
+  // 漂移门禁快照，由后端在创建、编辑与接受前统一重算。
+  gateBaseline?: number | null;
+  gateDeviation?: number | null;
+  gateTolerance?: number | null;
+  gateSampleSize?: number;
+  gateStatus?: 'pending' | 'passed' | 'blocked' | string;
+  gateBlockReason?: string;
+  supersededById?: number | null;
+  superseded?: boolean;
+}
+
+export interface CalibrationGroupSummary {
+  relatedCode: string;
+  category: string;
+  tolerance: number;
+  baseline: number;
+  sampleSize: number;
+  accepted: number;
+  openBlocked: number;
+}
+
+export interface CalibrationSummary {
+  totalProofs: number;
+  acceptedProofs: number;
+  openBlocked: number;
+  groups: CalibrationGroupSummary[];
 }
 
 export interface RevisionRecord {
