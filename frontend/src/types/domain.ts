@@ -15,9 +15,38 @@ export interface DomainRecord {
   effectiveAt: string;
   evidence: string;
   relatedCode: string;
+  driftBaseline?: number;
+  driftDeviation?: number;
+  driftTolerance?: number;
+  driftSampleSize?: number;
+  driftBlocked?: boolean;
+  driftBlockReason?: string;
+  driftEvaluatedAt?: string;
   createdAt: string;
   updatedAt: string;
   revisions?: RevisionRecord[];
+}
+
+export interface CalibrationGroupSummary {
+  relatedCode: string;
+  category: string;
+  baseline?: number;
+  tolerance: number;
+  sampleSize: number;
+  pendingProofs: number;
+  supersededProofs: number;
+  latestProofId: number;
+  latestDeviation?: number;
+  latestBlocked: boolean;
+}
+
+export interface CalibrationSummary {
+  totalProofs: number;
+  acceptedProofs: number;
+  pendingProofs: number;
+  blockedProofs: number;
+  supersededProofs: number;
+  groups: CalibrationGroupSummary[];
 }
 
 export interface RevisionRecord {

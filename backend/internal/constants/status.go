@@ -41,10 +41,11 @@ var PrintRunTransitions = map[string]map[string]bool{
 }
 
 var ColorProofTransitions = map[string]map[string]bool{
-	"captured": {"review": true},
-	"review":   {"accepted": true, "rejected": true, "captured": true},
-	"accepted": {"review": true},
-	"rejected": {"review": true},
+	"captured":       {"review": true},
+	"review":         {"accepted": true, "rejected": true, "captured": true, "review_pending": true},
+	"review_pending": {"review": true, "accepted": true, "rejected": true},
+	"accepted":       {"review": true},
+	"rejected":       {"review": true},
 }
 
 var ReleaseDecisionTransitions = map[string]map[string]bool{

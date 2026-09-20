@@ -9,4 +9,6 @@ var (
 	ErrInactiveUser      = errors.New("user account is inactive")
 	ErrForbidden         = errors.New("role is not permitted for this operation")
 	ErrLocked            = errors.New("resolved record is immutable")
+	ErrDriftBlocked      = errors.New("proof drift exceeds the category tolerance")
+	ErrProofSuperseded   = errors.New("proof has been superseded by a newer proof")
 )
